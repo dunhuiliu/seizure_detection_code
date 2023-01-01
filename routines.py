@@ -87,7 +87,7 @@ def get_data_keys_subsample(file_list, config):
     ''' Create the list of segment keys for the data generator via the subsampling method. Each key [1x4]
     contains the index of the recording within the file_list, the start and stop times of the segment in
     seconds and the label of the segment.
-
+        
     Args:
         file_list: a list of raw instances (mne package) of the recordings
         config: configuration object containing the parameters, namely the window frame, stride for non-
@@ -109,16 +109,16 @@ def get_data_keys_subsample(file_list, config):
 
         [events_times_S, _, _] = aux_functions.wrangle_tsv_sz1(ann_path_S, only_visible_bhe=True)
         [events_times_NS, _, _] = aux_functions.wrangle_tsv_sz1(ann_path_NS, only_visible_bhe=False)
-
+        
         if not events_times_S and not events_times_NS:
-            n_segs =  int(np.floor((np.floor(file.tmax) - config.frame)/config.stride))
+            n_segs =  int(np.floor((np.floor(file.n_times / file.info['sfreq']) - config.frame) / config.stride)) + 1
             seg_start = np.arange(0, n_segs)*config.stride
             seg_stop = seg_start + config.frame
-
+            
             segments_NS.extend(np.column_stack(([i]*n_segs, seg_start, seg_stop, np.zeros(n_segs))))
         else:
             for e, ev in enumerate(events_times_S):
-                n_segs = int(np.floor((ev[1] - ev[0])/config.stride_s)-1)
+                n_segs = int(np.floor((ev[1] - ev[0]  - config.frame)/config.stride_s)) + 1
                 seg_start = np.arange(0, n_segs)*config.stride_s + ev[0]
                 seg_stop = seg_start + config.frame
                 segments_S.extend(np.column_stack(([i]*n_segs, seg_start, seg_stop, np.ones(n_segs))))
@@ -128,17 +128,17 @@ def get_data_keys_subsample(file_list, config):
                     ev[1] = ev[0] + 10
 
                 if e == 0:
-                    n_segs = int(np.floor((ev[0])/config.stride)-1)
+                    n_segs = int(np.floor((ev[0] - config.frame)/config.stride)) + 1
                     seg_start = np.arange(0, n_segs)*config.stride
                     seg_stop = seg_start + config.frame
                     segments_NS.extend(np.column_stack(([i]*n_segs, seg_start, seg_stop, np.zeros(n_segs))))
                 else:
-                    n_segs = int(np.floor((ev[0] - events_times_NS[e-1][1])/config.stride)-1)
+                    n_segs = int(np.floor((ev[0] - events_times_NS[e-1][1] - config.frame)/config.stride)) + 1
                     seg_start = np.arange(0, n_segs)*config.stride + events_times_NS[e-1][1]
                     seg_stop = seg_start + config.frame
                     segments_NS.extend(np.column_stack(([i]*n_segs, seg_start, seg_stop, np.zeros(n_segs))))
                 if e == len(events_times_NS)-1:
-                    n_segs = int(np.floor((np.floor(file.tmax) - ev[1])/config.stride)-1)
+                    n_segs = int(np.floor((np.floor(file.n_times / file.info['sfreq']) - ev[1] - config.frame)/config.stride)) + 1
                     seg_start = np.arange(0, n_segs)*config.stride + ev[1]
                     seg_stop = seg_start + config.frame
                     segments_NS.extend(np.column_stack(([i]*n_segs, seg_start, seg_stop, np.zeros(n_segs))))
